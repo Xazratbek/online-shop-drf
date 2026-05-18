@@ -1,25 +1,15 @@
 from django.core.mail import send_mail
 from django.db import transaction
-from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-
 from accounts.models import AuthType, User
 from authentication.models import OTPCode, Purpose, RegistrationSession, Step
-from authentication.serializers import (
-    CompleteProfileSerializer,
-    LoginSerializer,
-    ProfileSerializer,
-    RegistrationSessionSerializer,
-    StartRegistrationSerializer,
-    UploadAvatarSerializer,
-    VerifyOTPSerializer,
-)
+from authentication.serializers import *
+from django.views.generic import TemplateView
 from authentication.utils import generate_otp, generate_password, generate_username
-
 
 class StartSignupView(APIView):
     permission_classes = [AllowAny]
@@ -50,11 +40,41 @@ class StartSignupView(APIView):
             )
 
         if email:
-            send_mail("Tasdiqlash kodi", f"Sizning kod: {otp}", None, [email], fail_silently=True)
+            send_mail("Tasdiqlash kodi", f"Sizning kod: {otp}", 'xazratbek123@gmail.com', [email], fail_silently=False)
         else:
             print(f"[PHONE OTP] {phone_number}: {otp}")
 
-        return Response({"session_id": str(session.id), "step": Step.VERIFY}, status=status.HTTP_201_CREATED)
+        return Response({"status":status.HTTP_200_OK,"session_id": str(session.id), "step": Step.VERIFY,"message":f"{email if email else phone_number}-ga tasdiqlash kodi yuborildi"}, status=status.HTTP_201_CREATED)
+
+class ResendCodeView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        session_id = request.data.get('session_id','')
+        if session_id and not (session.user.is_phone_verified or session.user.is_email_verified):
+            session = RegistrationSession.objects.filter(id=session_id).select_related('user').first()
+            if session and session.current_step == Step.VERIFY:
+                email = session.user.email
+                phone_number = session.user.phone_number
+                otp = generate_otp()
+                OTPCode.objects.create(
+                                email=email if email else None,
+                                phone_number=phone_number if phone_number else None,
+                                code=otp,
+                                purpose=Purpose.REGISTER,
+                                expires_at=OTPCode.get_expiry(),
+                            )
+                if session.user.email:
+                    send_mail("Tasdiqlash kodi", f"Sizning kod: {otp}", 'xazratbek123@gmail.com', [session.user.email], fail_silently=False)
+                else:
+                    print(f"[PHONE OTP] {session.user.phone_number}: {otp}")
+
+                return Response({"status":status.HTTP_201_CREATED,"session_id": str(session.id), "step": Step.VERIFY,"message":f"{email if email else phone_number}-ga tasdiqlash kodi qayta yuborildi"}, status=status.HTTP_201_CREATED)
+
+        return Response({
+            "status":status.HTTP_404_NOT_FOUND,
+            "message":"session topilmadi"
+        },status=status.HTTP_404_NOT_FOUND)
 
 
 class VerifySignupOTPView(APIView):
@@ -66,7 +86,7 @@ class VerifySignupOTPView(APIView):
 
         session = RegistrationSession.objects.select_related("user").filter(id=serializer.validated_data["session_id"]).first()
         if not session:
-            return Response({"detail": "Session topilmadi"}, status=404)
+            return Response({'status':status.HTTP_404_NOT_FOUND,"detail": "Session topilmadi"}, status=404)
 
         user = session.user
         otp = OTPCode.objects.filter(
@@ -77,15 +97,17 @@ class VerifySignupOTPView(APIView):
         ).order_by("-created_at").first()
 
         if not otp or otp.is_expired() or otp.code != serializer.validated_data["code"]:
-            return Response({"detail": "Kod noto'g'ri yoki eskirgan"}, status=400)
+            return Response({"status":status.HTTP_400_BAD_REQUEST,"detail": "Kod noto'g'ri yoki eskirgan"}, status=400)
 
         otp.is_used = True
         otp.save(update_fields=["is_used"])
 
         if user.email:
             user.is_email_verified = True
+
         if user.phone_number:
             user.is_phone_verified = True
+
         user.save(update_fields=["is_email_verified", "is_phone_verified", "updated_at"])
 
         session.current_step = Step.PROFILE
@@ -138,7 +160,7 @@ class UploadAvatarView(APIView):
         session.is_completed = True
         session.save(update_fields=["current_step", "is_completed", "updated_at"])
 
-        return Response({"step": Step.COMPLETED, "profile": ProfileSerializer(session.user).data})
+        return Response({'status':status.HTTP_200_OK,"step": Step.COMPLETED, "profile": ProfileSerializer(session.user).data},status=status.HTTP_200_OK)
 
 
 class LoginView(APIView):
@@ -158,9 +180,9 @@ class LoginView(APIView):
 
 
 class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         return Response(ProfileSerializer(request.user).data)
-
 
 class RegistrationSessionDetailView(APIView):
     permission_classes = [AllowAny]
@@ -170,9 +192,3 @@ class RegistrationSessionDetailView(APIView):
         if not session:
             return Response({"detail": "Session topilmadi"}, status=404)
         return Response(RegistrationSessionSerializer(session).data)
-
-
-from django.views.generic import TemplateView
-
-class AuthPageView(TemplateView):
-    template_name = "authentication/auth.html"

@@ -1,6 +1,11 @@
 from pathlib import Path
 from datetime import timedelta
 import environ
+import certifi
+import os
+import ssl
+
+os.environ['SSL_CERT_FILE'] = certifi.where()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -169,3 +174,4 @@ EMAIL_PORT = env("EMAIL_PORT")
 EMAIL_USE_TLS =  env("EMAIL_USE_TLS")
 EMAIL_HOST_USER =  env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD =  env("EMAIL_HOST_PASSWORD")
+EMAIL_SSL_CONTEXT = ssl._create_unverified_context()

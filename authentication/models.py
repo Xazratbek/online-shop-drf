@@ -9,7 +9,6 @@ class Purpose(models.TextChoices):
     LOGIN = "login", "Login"
     RESET_PASSWORD = "reset_password", "Reset Password"
 
-
 class OTPCode(BaseModel):
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
@@ -26,7 +25,7 @@ class OTPCode(BaseModel):
 
     @staticmethod
     def get_expiry():
-        return timezone.now() + timedelta(minutes=2)
+        return timezone.now() + timedelta(minutes=3)
 
     def __str__(self):
         return self.code
