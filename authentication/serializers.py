@@ -1,4 +1,9 @@
+from django.contrib.auth import authenticate
 from rest_framework import serializers
+
+from accounts.models import User
+from authentication.models import RegistrationSession
+
 
 class StartRegistrationSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False)
@@ -9,28 +14,66 @@ class StartRegistrationSerializer(serializers.Serializer):
         phone = attrs.get("phone_number")
 
         if not email and not phone:
-            raise serializers.ValidationError(
-                "Email yoki phone number kiritish majburiy"
-            )
-
+            raise serializers.ValidationError("Email yoki phone number kiritish majburiy")
         if email and phone:
-            raise serializers.ValidationError(
-                "Faqat bittasi yuborilishi kerak"
-            )
+            raise serializers.ValidationError("Faqat bittasi yuborilishi kerak")
 
         return attrs
+
 
 class VerifyOTPSerializer(serializers.Serializer):
     session_id = serializers.UUIDField()
     code = serializers.CharField(max_length=6)
 
-class CompleteProfileSerializer(serializers.Serializer):
 
+class CompleteProfileSerializer(serializers.Serializer):
+    session_id = serializers.UUIDField()
     full_name = serializers.CharField()
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    bio = serializers.CharField(required=False, allow_blank=True)
 
-    bio = serializers.CharField(required=False)
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Bu username band")
+        return value
+
 
 class UploadAvatarSerializer(serializers.Serializer):
-    avatar = serializers.ImageField()
+    session_id = serializers.UUIDField()
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
+
+class LoginSerializer(serializers.Serializer):
+    login = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        login = attrs["login"]
+        password = attrs["password"]
+
+        user = authenticate(username=login, password=password)
+        if not user:
+            user_obj = User.objects.filter(email=login).first() or User.objects.filter(phone_number=login).first()
+            if user_obj:
+                user = authenticate(username=user_obj.username, password=password)
+
+        if not user:
+            raise serializers.ValidationError("Login yoki parol noto'g'ri")
+
+        attrs["user"] = user
+        return attrs
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "username", "email", "phone_number", "bio", "avatar")
+
+
+class RegistrationSessionSerializer(serializers.ModelSerializer):
+    user = ProfileSerializer(read_only=True)
+
+    class Meta:
+        model = RegistrationSession
+        fields = ("id", "current_step", "is_completed", "user")
