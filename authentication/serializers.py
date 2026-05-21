@@ -25,7 +25,6 @@ class VerifyOTPSerializer(serializers.Serializer):
     session_id = serializers.UUIDField()
     code = serializers.CharField(max_length=6)
 
-
 class CompleteProfileSerializer(serializers.Serializer):
     session_id = serializers.UUIDField()
     full_name = serializers.CharField()

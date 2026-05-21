@@ -2,7 +2,6 @@ from django.db import models
 from common.models import BaseModel
 
 class UserAddress(BaseModel):
-
     user = models.ForeignKey(
         "accounts.User",
         on_delete=models.CASCADE,

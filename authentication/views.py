@@ -8,7 +8,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import AuthType, User
 from authentication.models import OTPCode, Purpose, RegistrationSession, Step
 from authentication.serializers import *
-from django.views.generic import TemplateView
 from authentication.utils import generate_otp, generate_password, generate_username
 
 class StartSignupView(APIView):
@@ -113,7 +112,7 @@ class VerifySignupOTPView(APIView):
         session.current_step = Step.PROFILE
         session.save(update_fields=["current_step", "updated_at"])
 
-        return Response({"step": Step.PROFILE})
+        return Response({"status":status.HTTP_200_OK,"message":"Code tasdiqlandi","step": Step.PROFILE})
 
 
 class CompleteProfileView(APIView):
@@ -125,7 +124,7 @@ class CompleteProfileView(APIView):
 
         session = RegistrationSession.objects.select_related("user").filter(id=serializer.validated_data["session_id"]).first()
         if not session:
-            return Response({"detail": "Session topilmadi"}, status=404)
+            return Response({"detail": "Session topilmadi"}, status=status.HTTP_404_NOT_FOUND)
 
         user = session.user
         user.first_name = serializer.validated_data["full_name"]
@@ -149,7 +148,7 @@ class UploadAvatarView(APIView):
 
         session = RegistrationSession.objects.select_related("user").filter(id=serializer.validated_data["session_id"]).first()
         if not session:
-            return Response({"detail": "Session topilmadi"}, status=404)
+            return Response({"detail": "Session topilmadi"}, statuss=status.HTTP_404_NOT_FOUND)
 
         avatar = serializer.validated_data.get("avatar")
         if avatar:

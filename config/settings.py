@@ -123,7 +123,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = 'static/'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -144,6 +144,7 @@ AWS_S3_ENDPOINT_URL = f'https://{SUPABASE_PROJECT_ID}.storage.supabase.co/storag
 AWS_S3_CUSTOM_DOMAIN = f'{SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/{AWS_STORAGE_BUCKET_NAME}'
 AWS_S3_REGION_NAME = "ap-southeast-1"
 
+
 AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = True
 AWS_QUERYSTRING_AUTH = False
@@ -152,10 +153,10 @@ AWS_S3_SIGNATURE_VERSION = 's3v4'
 
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "config.storage_backends.MediaStorage",
     },
     "staticfiles": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "BACKEND": "config.storage_backends.StaticStorage",
     },
 }
 
@@ -175,3 +176,6 @@ EMAIL_USE_TLS =  env("EMAIL_USE_TLS")
 EMAIL_HOST_USER =  env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD =  env("EMAIL_HOST_PASSWORD")
 EMAIL_SSL_CONTEXT = ssl._create_unverified_context()
+
+STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
