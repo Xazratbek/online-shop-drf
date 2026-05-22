@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-
+from django.db.models import Q
 from accounts.models import User
 from authentication.models import RegistrationSession
 
@@ -48,18 +48,17 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        login = attrs["login"]
-        password = attrs["password"]
-
-        user = authenticate(username=login, password=password)
-        if not user:
-            user_obj = User.objects.filter(email=login).first() or User.objects.filter(phone_number=login).first()
-            if user_obj:
-                user = authenticate(username=user_obj.username, password=password)
-
+        login = attrs.get("login")
+        password = attrs.get("password")
+        user_obj = User.objects.filter(
+            Q(username=login) | Q(email=login) | Q(phone_number=login)
+        ).first()
+        if user_obj:
+            user = authenticate(username=user_obj.username, password=password)
+        else:
+            user = None
         if not user:
             raise serializers.ValidationError("Login yoki parol noto'g'ri")
-
         attrs["user"] = user
         return attrs
 

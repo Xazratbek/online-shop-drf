@@ -1,5 +1,5 @@
 from django.urls import path
-
+from rest_framework_simplejwt.views import TokenBlacklistView
 from authentication.views import *
 
 urlpatterns = [
@@ -11,4 +11,5 @@ urlpatterns = [
     path('signup/resendcode/',ResendCodeView.as_view()),
     path("login/", LoginView.as_view()),
     path("me/", ProfileView.as_view()),
+    path('logout/',TokenBlacklistView.as_view())
 ]
