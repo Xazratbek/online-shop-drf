@@ -1,8 +1,9 @@
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from django.db.models import Q
 from accounts.models import User
-from authentication.models import RegistrationSession
+from authentication.models import OTPCode, Purpose, RegistrationSession
 
 
 class StartRegistrationSerializer(serializers.Serializer):
@@ -77,10 +78,83 @@ class RegistrationSessionSerializer(serializers.ModelSerializer):
         fields = ("id", "current_step", "is_completed", "user")
 
 class PasswordChange(serializers.Serializer):
-    pass
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if not user or not user.is_authenticated:
+            raise serializers.ValidationError("Avval login qiling")
+
+        if not user.check_password(attrs["old_password"]):
+            raise serializers.ValidationError({"old_password": "Eski parol noto'g'ri"})
+
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Parollar mos emas"})
+
+        validate_password(attrs["new_password"], user=user)
+        return attrs
 
 class ForgotPassword(serializers.Serializer):
-    pass
+    email = serializers.EmailField(required=False)
+    phone_number = serializers.CharField(required=False)
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        phone_number = attrs.get("phone_number")
+
+        if not email and not phone_number:
+            raise serializers.ValidationError("Email yoki phone number kiritish majburiy")
+        if email and phone_number:
+            raise serializers.ValidationError("Faqat bittasi yuborilishi kerak")
+
+        user = User.objects.filter(
+            Q(email=email) if email else Q(phone_number=phone_number)
+        ).first()
+        if not user:
+            raise serializers.ValidationError("Foydalanuvchi topilmadi")
+
+        attrs["user"] = user
+        return attrs
 
 class ResetPassword(serializers.Serializer):
-    pass
+    email = serializers.EmailField(required=False)
+    phone_number = serializers.CharField(required=False)
+    code = serializers.CharField(max_length=6)
+    password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        phone_number = attrs.get("phone_number")
+
+        if not email and not phone_number:
+            raise serializers.ValidationError("Email yoki phone number kiritish majburiy")
+        if email and phone_number:
+            raise serializers.ValidationError("Faqat bittasi yuborilishi kerak")
+
+        if attrs["password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Parollar mos emas"})
+
+        user = User.objects.filter(
+            Q(email=email) if email else Q(phone_number=phone_number)
+        ).first()
+        if not user:
+            raise serializers.ValidationError("Foydalanuvchi topilmadi")
+
+        otp = OTPCode.objects.filter(
+            purpose=Purpose.RESET_PASSWORD,
+            is_used=False,
+            email=email if email else None,
+            phone_number=phone_number if phone_number else None,
+        ).order_by("-created_at").first()
+        if not otp or otp.is_expired() or otp.code != attrs["code"]:
+            raise serializers.ValidationError({"code": "Kod noto'g'ri yoki eskirgan"})
+
+        validate_password(attrs["password"], user=user)
+        attrs["user"] = user
+        attrs["otp"] = otp
+        return attrs

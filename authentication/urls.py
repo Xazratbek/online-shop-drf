@@ -11,5 +11,8 @@ urlpatterns = [
     path('signup/resendcode/',ResendCodeView.as_view()),
     path("login/", LoginView.as_view()),
     path("me/", ProfileView.as_view()),
+    path("password/change/", PasswordChangeView.as_view()),
+    path("password/forgot/", ForgotPasswordView.as_view()),
+    path("password/reset/", ResetPasswordView.as_view()),
     path('logout/',TokenBlacklistView.as_view())
 ]

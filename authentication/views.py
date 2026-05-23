@@ -183,6 +183,62 @@ class ProfileView(APIView):
     def get(self, request):
         return Response(ProfileSerializer(request.user).data)
 
+class PasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = PasswordChange(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        request.user.set_password(serializer.validated_data["new_password"])
+        request.user.save(update_fields=["password", "updated_at"])
+
+        return Response({"status": status.HTTP_200_OK, "message": "Parol o'zgartirildi"}, status=status.HTTP_200_OK)
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ForgotPassword(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data.get("email")
+        phone_number = serializer.validated_data.get("phone_number")
+        otp = generate_otp()
+
+        OTPCode.objects.create(
+            email=email if email else None,
+            phone_number=phone_number if phone_number else None,
+            code=otp,
+            purpose=Purpose.RESET_PASSWORD,
+            expires_at=OTPCode.get_expiry(),
+        )
+
+        if email:
+            send_mail("Parolni tiklash kodi", f"Sizning kod: {otp}", 'xazratbek123@gmail.com', [email], fail_silently=False)
+        else:
+            print(f"[RESET PASSWORD OTP] {phone_number}: {otp}")
+
+        return Response({"status": status.HTTP_201_CREATED, "message": f"{email if email else phone_number}-ga parolni tiklash kodi yuborildi"}, status=status.HTTP_201_CREATED)
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ResetPassword(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data["user"]
+        otp = serializer.validated_data["otp"]
+
+        user.set_password(serializer.validated_data["password"])
+        user.save(update_fields=["password", "updated_at"])
+
+        otp.is_used = True
+        otp.save(update_fields=["is_used", "updated_at"])
+
+        return Response({"status": status.HTTP_200_OK, "message": "Parol yangilandi"}, status=status.HTTP_200_OK)
+
 class RegistrationSessionDetailView(APIView):
     permission_classes = [AllowAny]
 
