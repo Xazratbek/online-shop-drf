@@ -7,6 +7,13 @@ class Status(models.TextChoices):
     PUBLISHED = "published"
 
 class Product(BaseModel):
+    seller = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="products",
+        null=True,
+        blank=True
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,
@@ -43,3 +50,6 @@ class ProductImage(BaseModel):
     )
     image = models.ImageField(upload_to="products/")
     is_main = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.product.title} image"

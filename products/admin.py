@@ -3,8 +3,9 @@ from products.models import Product, ProductImage
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("title", "category", "price", "stock", "status")
-    search_fields = ("title", "slug")
+    list_display = ("title", "seller", "category", "price", "stock", "status")
+    search_fields = ("title", "slug", "seller__username", "seller__email")
+    list_filter = ("status", "category")
     ordering = ("-created_at",)
 
 @admin.register(ProductImage)

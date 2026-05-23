@@ -5,4 +5,5 @@ from categories.models import Category
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "parent", "created_at")
     search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
     ordering = ("name",)

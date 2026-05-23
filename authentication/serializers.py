@@ -75,3 +75,12 @@ class RegistrationSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = RegistrationSession
         fields = ("id", "current_step", "is_completed", "user")
+
+class PasswordChange(serializers.Serializer):
+    pass
+
+class ForgotPassword(serializers.Serializer):
+    pass
+
+class ResetPassword(serializers.Serializer):
+    pass
