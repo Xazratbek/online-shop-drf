@@ -1,6 +1,19 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenBlacklistView
-from authentication.views import *
+
+from authentication.views import (
+    CompleteProfileView,
+    ForgotPasswordView,
+    LoginView,
+    PasswordChangeView,
+    ProfileView,
+    RegistrationSessionDetailView,
+    ResendCodeView,
+    ResetPasswordView,
+    StartSignupView,
+    UploadAvatarView,
+    VerifySignupOTPView,
+)
 
 urlpatterns = [
     path("signup/start/", StartSignupView.as_view()),
@@ -8,11 +21,11 @@ urlpatterns = [
     path("signup/profile/", CompleteProfileView.as_view()),
     path("signup/avatar/", UploadAvatarView.as_view()),
     path("signup/session/<uuid:session_id>/", RegistrationSessionDetailView.as_view()),
-    path('signup/resendcode/',ResendCodeView.as_view()),
+    path("signup/resendcode/", ResendCodeView.as_view()),
     path("login/", LoginView.as_view()),
     path("me/", ProfileView.as_view()),
     path("password/change/", PasswordChangeView.as_view()),
     path("password/forgot/", ForgotPasswordView.as_view()),
     path("password/reset/", ResetPasswordView.as_view()),
-    path('logout/',TokenBlacklistView.as_view())
+    path("logout/", TokenBlacklistView.as_view()),
 ]

@@ -7,7 +7,18 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import AuthType, User
 from authentication.models import OTPCode, Purpose, RegistrationSession, Step
-from authentication.serializers import *
+from authentication.serializers import (
+    CompleteProfileSerializer,
+    ForgotPassword,
+    LoginSerializer,
+    PasswordChange,
+    ProfileSerializer,
+    RegistrationSessionSerializer,
+    ResetPassword,
+    StartRegistrationSerializer,
+    UploadAvatarSerializer,
+    VerifyOTPSerializer,
+)
 from authentication.utils import generate_otp, generate_password, generate_username
 
 class StartSignupView(APIView):
@@ -49,10 +60,10 @@ class ResendCodeView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        session_id = request.data.get('session_id','')
-        if session_id and not (session.user.is_phone_verified or session.user.is_email_verified):
-            session = RegistrationSession.objects.filter(id=session_id).select_related('user').first()
-            if session and session.current_step == Step.VERIFY:
+        session_id = request.data.get('session_id', '')
+        session = RegistrationSession.objects.filter(id=session_id).select_related('user').first() if session_id else None
+        if session and not (session.user.is_phone_verified or session.user.is_email_verified):
+            if session.current_step == Step.VERIFY:
                 email = session.user.email
                 phone_number = session.user.phone_number
                 otp = generate_otp()
@@ -148,7 +159,7 @@ class UploadAvatarView(APIView):
 
         session = RegistrationSession.objects.select_related("user").filter(id=serializer.validated_data["session_id"]).first()
         if not session:
-            return Response({"detail": "Session topilmadi"}, statuss=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Session topilmadi"}, status=status.HTTP_404_NOT_FOUND)
 
         avatar = serializer.validated_data.get("avatar")
         if avatar:
